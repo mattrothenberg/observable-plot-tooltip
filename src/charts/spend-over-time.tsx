@@ -1,3 +1,4 @@
+import { AnimatedNumber } from "@/components/animated-number";
 import PlotFigure from "@/components/plot-figure";
 import {
   offset,
@@ -115,6 +116,7 @@ export function SpendOverTime() {
   );
 
   const mergedRefs = useMergeRefs([observe, refs.setReference]);
+  const activeRevenueDelta = activeValue ? activeValue.revenue - target : 0;
 
   return (
     <>
@@ -126,7 +128,7 @@ export function SpendOverTime() {
           <motion.div
             ref={refs.setFloating}
             style={floatingStyles}
-            className="pointer-events-none bg-gray-1 border border-gray-4 min-w-32 rounded shadow-md shadow-gray-1"
+            className="pointer-events-none border border-gray-4 min-w-32 rounded shadow-md shadow-gray-1 bg-gray-1"
             {...getFloatingProps()}
             animate={{
               opacity: 1,
@@ -138,25 +140,30 @@ export function SpendOverTime() {
               opacity: 0,
             }}
           >
-            <div className="p-2 border-b border-gray-4">
-              <p className="text-xs text-gray-11">
+            <div className="px-3 py-1.5 border-b border-gray-4">
+              <p className="text-xs text-gray-12">
                 {activeValue.date.toLocaleDateString()}
               </p>
             </div>
-            <div className="p-2">
-              <p className="text-xl text-gray-12 font-semibold">
-                {currency(activeValue.revenue, { precision: 0 }).format()}
-              </p>
-              {/* how much under target? */}
+            <div
+              className={`p-3 bg-gradient-to-br transition-colors ${
+                activeRevenueDelta > 0
+                  ? "from-green-a2 to-green-a1"
+                  : "from-red-a2 to-red-a1"
+              }`}
+            >
+              <div className="text-xl text-gray-12 font-semibold">
+                <AnimatedNumber num={activeValue.revenue} />
+              </div>
               <p
                 className={`text-sm ${
-                  activeValue.revenue > target ? "text-green-11" : "text-red-11"
+                  activeRevenueDelta > 0 ? "text-green-11" : "text-red-11"
                 }`}
               >
                 {currency(activeValue.revenue - target, {
                   precision: 0,
                 }).format()}{" "}
-                {activeValue.revenue > target ? "above" : "under"} target
+                {activeRevenueDelta > 0 ? "above" : "under"} target
               </p>
             </div>
           </motion.div>
