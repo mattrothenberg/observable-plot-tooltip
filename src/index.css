@@ -4,13 +4,22 @@
 
 @import '@radix-ui/colors/gray.css';
 @import '@radix-ui/colors/gray-dark.css';
+@import '@radix-ui/colors/gray-alpha.css';
 @import '@radix-ui/colors/indigo.css';
 @import '@radix-ui/colors/indigo-dark.css';
+@import '@radix-ui/colors/indigo-alpha.css';
 @import '@radix-ui/colors/green.css';
 @import '@radix-ui/colors/green-dark.css';
+@import '@radix-ui/colors/green-alpha.css';
 @import '@radix-ui/colors/red.css';
 @import '@radix-ui/colors/red-dark.css';
+@import '@radix-ui/colors/red-alpha.css';
 
 body {
-  @apply antialiased text-gray-12;
+  @apply antialiased text-gray-12 bg-gray-1;
+}
+
+/* Hack to remove the crosshair text but maintain crosshair functionality. */
+g[aria-label="crosshair text"] {
+  display: none;
 }

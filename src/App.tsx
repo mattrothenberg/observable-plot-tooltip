@@ -1,7 +1,11 @@
+import { SpendOverTime } from "./charts/spend-over-time";
+
 function App() {
   return (
-    <div className="p-4">
-      <h1 className="text-4xl">Hello</h1>
+    <div className="px-8 py-16">
+      <div className="h-[200px]">
+        <SpendOverTime />
+      </div>
     </div>
   );
 }
