@@ -1,3 +1,16 @@
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
+
+@import '@radix-ui/colors/gray.css';
+@import '@radix-ui/colors/gray-dark.css';
+@import '@radix-ui/colors/indigo.css';
+@import '@radix-ui/colors/indigo-dark.css';
+@import '@radix-ui/colors/green.css';
+@import '@radix-ui/colors/green-dark.css';
+@import '@radix-ui/colors/red.css';
+@import '@radix-ui/colors/red-dark.css';
+
+body {
+  @apply antialiased text-gray-12;
+}
