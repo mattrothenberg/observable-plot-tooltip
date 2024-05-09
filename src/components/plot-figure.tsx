@@ -6,7 +6,7 @@ export default function PlotFigure<T>({
   onInput,
 }: {
   options: Plot.PlotOptions;
-  onInput?: (value: T | undefined | null) => void;
+  onInput?: (value: T | undefined | null, plot: Plot.Plot) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -16,7 +16,7 @@ export default function PlotFigure<T>({
     const plot = Plot.plot(options);
 
     plot.addEventListener("input", () => {
-      onInput?.(plot.value);
+      onInput?.(plot.value, plot);
     });
 
     containerRef.current.append(plot);

@@ -34,12 +34,15 @@ type Datum = {
 export function SpendOverTime() {
   const [isOpen, setIsOpen] = useState(false);
   const { observe, width, height } = useDimensions();
-  const [hovered, setHovered] = useState<Datum | null | undefined>(null);
+  const [activeValue, setActiveValue] = useState<Datum | null | undefined>(
+    null,
+  );
+  const [activeCoord, setActiveCoord] = useState<[number, number] | null>(null);
 
-  const { refs, floatingStyles, context } = useFloating({
+  const { refs, floatingStyles, context, x, y } = useFloating({
     open: isOpen,
     onOpenChange: setIsOpen,
-    // placement: "bottom",
+    placement: "bottom",
     middleware: [shift(), offset(-16)],
     strategy: "fixed",
   });
@@ -49,6 +52,8 @@ export function SpendOverTime() {
   const clientPoint = useClientPoint(context, {
     axis: "x",
     enabled: isOpen,
+    x: activeCoord?.[0] ?? 0,
+    y: 0,
   });
 
   const { getReferenceProps, getFloatingProps } = useInteractions([
@@ -63,6 +68,8 @@ export function SpendOverTime() {
       x: {
         line: true,
         label: "Date",
+        type: "time",
+        interval: "day",
       },
       y: {
         label: "Revenue ($)",
@@ -90,9 +97,22 @@ export function SpendOverTime() {
     } satisfies PlotOptions;
   }, [width, height]);
 
-  const handleInput = useCallback((value: Datum | null | undefined) => {
-    setHovered(value);
-  }, []);
+  const handleInput = useCallback(
+    (value: Datum | null | undefined, plot: Plot.Plot) => {
+      const xScale = plot.scale("x");
+      const yScale = plot.scale("y");
+
+      if (!value) {
+        return;
+      }
+
+      const xCoord = xScale?.apply(value.date);
+      const yCoord = yScale?.apply(value.revenue);
+      setActiveValue(value);
+      setActiveCoord([xCoord, yCoord]);
+    },
+    [],
+  );
 
   const mergedRefs = useMergeRefs([observe, refs.setReference]);
 
@@ -102,7 +122,7 @@ export function SpendOverTime() {
         <PlotFigure<Datum> onInput={handleInput} options={options} />
       </div>
       <AnimatePresence>
-        {isOpen && hovered ? (
+        {isOpen && activeValue ? (
           <motion.div
             ref={refs.setFloating}
             style={floatingStyles}
@@ -120,22 +140,23 @@ export function SpendOverTime() {
           >
             <div className="p-2 border-b border-gray-4">
               <p className="text-xs text-gray-11">
-                {hovered.date.toLocaleDateString()}
+                {activeValue.date.toLocaleDateString()}
               </p>
             </div>
             <div className="p-2">
               <p className="text-xl text-gray-12 font-semibold">
-                {currency(hovered.revenue, { precision: 0 }).format()}
+                {currency(activeValue.revenue, { precision: 0 }).format()}
               </p>
               {/* how much under target? */}
               <p
                 className={`text-sm ${
-                  hovered.revenue > target ? "text-green-11" : "text-red-11"
+                  activeValue.revenue > target ? "text-green-11" : "text-red-11"
                 }`}
               >
-                {currency(hovered.revenue - target, { precision: 0 }).format()}
-                &nbsp;
-                {hovered.revenue > target ? "over" : "under"} target
+                {currency(activeValue.revenue - target, {
+                  precision: 0,
+                }).format()}{" "}
+                {activeValue.revenue > target ? "above" : "under"} target
               </p>
             </div>
           </motion.div>
