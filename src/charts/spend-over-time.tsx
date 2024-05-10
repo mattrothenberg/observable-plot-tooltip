@@ -1,20 +1,13 @@
 import { AnimatedNumber } from "@/components/animated-number";
 import PlotFigure from "@/components/plot-figure";
-import {
-  offset,
-  shift,
-  useClientPoint,
-  useFloating,
-  useHover,
-  useInteractions,
-  useMergeRefs,
-} from "@floating-ui/react";
+import { usePlotTooltip } from "@/hooks";
+import { offset, shift, useMergeRefs } from "@floating-ui/react";
 import type { PlotOptions } from "@observablehq/plot";
 import * as Plot from "@observablehq/plot";
 import currency from "currency.js";
 import { subDays } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useState } from "react";
+import { forwardRef, useCallback, useMemo, useState } from "react";
 import useDimensions from "react-cool-dimensions";
 
 const randomData = Array.from({ length: 30 }, (_, i) => ({
@@ -32,40 +25,32 @@ type Datum = {
   revenue: number;
 };
 
+type ActivePoint = {
+  value: Datum;
+  pos: [number, number];
+};
+
 export function SpendOverTime() {
-  const [isOpen, setIsOpen] = useState(false);
   const { observe, width, height } = useDimensions();
-  const [activeValue, setActiveValue] = useState<Datum | null | undefined>(
-    null,
-  );
-  const [activeCoord, setActiveCoord] = useState<[number, number] | null>(null);
+  const [activePoint, setActivePoint] = useState<ActivePoint>();
 
-  const { refs, floatingStyles, context, x, y } = useFloating({
-    open: isOpen,
-    onOpenChange: setIsOpen,
-    placement: "bottom",
-    middleware: [shift(), offset(-16)],
-    strategy: "fixed",
-  });
-
-  const hover = useHover(context);
-
-  const clientPoint = useClientPoint(context, {
-    axis: "x",
-    enabled: isOpen,
-    x: activeCoord?.[0] ?? 0,
-    y: 0,
-  });
-
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    hover,
-    clientPoint,
-  ]);
+  const { getFloatingProps, getReferenceProps, refs, floatingStyles, isOpen } =
+    usePlotTooltip({
+      position: activePoint?.pos,
+      options: {
+        placement: "bottom",
+        middleware: [shift(), offset(-16)],
+        strategy: "fixed",
+      },
+    });
 
   const options = useMemo(() => {
     return {
       width,
       height,
+      style: {
+        fontFamily: "Readex Pro",
+      },
       x: {
         line: true,
         label: "Date",
@@ -100,31 +85,41 @@ export function SpendOverTime() {
 
   const handleInput = useCallback(
     (value: Datum | null | undefined, plot: Plot.Plot) => {
-      const xScale = plot.scale("x");
-      const yScale = plot.scale("y");
-
       if (!value) {
         return;
       }
 
+      const xScale = plot.scale("x");
+      const yScale = plot.scale("y");
+
       const xCoord = xScale?.apply(value.date);
       const yCoord = yScale?.apply(value.revenue);
-      setActiveValue(value);
-      setActiveCoord([xCoord, yCoord]);
+
+      setActivePoint({
+        value,
+        pos: [xCoord, yCoord],
+      });
     },
     [],
   );
 
   const mergedRefs = useMergeRefs([observe, refs.setReference]);
-  const activeRevenueDelta = activeValue ? activeValue.revenue - target : 0;
+
+  const activeRevenueDelta = activePoint?.value
+    ? activePoint.value.revenue - target
+    : 0;
 
   return (
     <>
-      <div className="h-full" ref={mergedRefs} {...getReferenceProps()}>
+      <div
+        className="h-full plot-wrap"
+        ref={mergedRefs}
+        {...getReferenceProps()}
+      >
         <PlotFigure<Datum> onInput={handleInput} options={options} />
       </div>
       <AnimatePresence>
-        {isOpen && activeValue ? (
+        {isOpen && activePoint ? (
           <motion.div
             ref={refs.setFloating}
             style={floatingStyles}
@@ -140,35 +135,43 @@ export function SpendOverTime() {
               opacity: 0,
             }}
           >
-            <div className="px-3 py-1.5 border-b border-gray-4">
-              <p className="text-xs text-gray-12">
-                {activeValue.date.toLocaleDateString()}
-              </p>
-            </div>
-            <div
-              className={`p-3 bg-gradient-to-br transition-colors ${
-                activeRevenueDelta > 0
-                  ? "from-green-a2 to-green-a1"
-                  : "from-red-a2 to-red-a1"
-              }`}
-            >
-              <div className="text-xl text-gray-12 font-semibold">
-                <AnimatedNumber num={activeValue.revenue} />
-              </div>
-              <p
-                className={`text-sm ${
-                  activeRevenueDelta > 0 ? "text-green-11" : "text-red-11"
-                }`}
-              >
-                {currency(activeValue.revenue - target, {
-                  precision: 0,
-                }).format()}{" "}
-                {activeRevenueDelta > 0 ? "above" : "under"} target
-              </p>
-            </div>
+            <SpendTooltip
+              delta={activeRevenueDelta}
+              value={activePoint.value}
+            />
           </motion.div>
         ) : null}
       </AnimatePresence>
     </>
   );
 }
+
+const SpendTooltip = forwardRef<
+  HTMLDivElement,
+  { value: Datum; delta: number }
+>(({ value, delta }, ref) => {
+  return (
+    <div ref={ref}>
+      <div className="px-3 py-1.5 border-b border-gray-4">
+        <p className="text-xs text-gray-12">
+          {value.date.toLocaleDateString()}
+        </p>
+      </div>
+      <div
+        className={`p-3 bg-gradient-to-br transition-colors ${
+          delta > 0 ? "from-green-a2 to-green-a1" : "from-red-a2 to-red-a1"
+        }`}
+      >
+        <div className="text-xl text-gray-12 font-semibold">
+          <AnimatedNumber num={value.revenue} />
+        </div>
+        <p className={`text-sm ${delta > 0 ? "text-green-11" : "text-red-11"}`}>
+          {currency(value.revenue - target, {
+            precision: 0,
+          }).format()}{" "}
+          {delta > 0 ? "above" : "under"} target
+        </p>
+      </div>
+    </div>
+  );
+});
